@@ -102,29 +102,29 @@ else
 	cd "$DIR"
 	if command -v git >/dev/null; then
 		echo -e "Downloading GpuOwl\n"
-		git clone https://github.com/preda/gpuowl.git $DIR1
-		cp -r $DIR1/ $DIR2/
-		cp -r $DIR1/ $DIR3/
-		pushd $DIR1 >/dev/null
-		git checkout -f $BRANCH1
+		git clone https://github.com/preda/gpuowl.git "$DIR1"
+		cp -r "$DIR1"/ "$DIR2"/
+		cp -r "$DIR1"/ "$DIR3"/
+		pushd "$DIR1" >/dev/null
+		git checkout -f "$BRANCH1"
 		sed -i 's/--dirty //' Makefile
 		popd >/dev/null
 		echo
-		pushd $DIR2 >/dev/null
-		git checkout -f -b v7.2-112 $BRANCH2
+		pushd "$DIR2" >/dev/null
+		git checkout -f -b v7.2-112 "$BRANCH2"
 		sed -i 's/--dirty //' Makefile
 		popd >/dev/null
 		echo
-		pushd $DIR3 >/dev/null
-		git checkout -f $BRANCH3
+		pushd "$DIR3" >/dev/null
+		git checkout -f "$BRANCH3"
 		sed -i 's/--dirty //' Makefile
 		popd >/dev/null
 	else
 		echo -e "Downloading GpuOwl v6.11\n"
-		wget https://github.com/preda/gpuowl/archive/$BRANCH3.tar.gz
+		wget "https://github.com/preda/gpuowl/archive/$BRANCH3.tar.gz"
 		echo -e "\nDecompressing the files\n"
-		tar -xzvf $BRANCH3.tar.gz
-		mv -v gpuowl-$BRANCH3/ $DIR3/
+		tar -xzvf "$BRANCH3.tar.gz"
+		mv -v "gpuowl-$BRANCH3"/ "$DIR3"/
 		if output=$(curl -sf "https://api.github.com/repos/preda/gpuowl/compare/v6.11...$BRANCH3"); then
 			if command -v jq >/dev/null; then
 				behind_by=$(echo "$output" | jq '.behind_by')
@@ -133,19 +133,19 @@ else
 				behind_by=$(echo "$output" | python3 -c 'import sys, json; print(json.load(sys.stdin)["behind_by"])')
 				sha=$(echo "$output" | python3 -c 'import sys, json; print(json.load(sys.stdin)["base_commit"]["sha"])')
 			fi
-			sed -i 's/`git describe --long --dirty --always`/v6.11'"-${behind_by}-g${sha::7}"'/' $DIR3/Makefile
+			sed -i 's/`git describe --long --dirty --always`/v6.11'"-${behind_by}-g${sha::7}"'/' "$DIR3/Makefile"
 		fi
 		echo -e "Downloading GpuOwl v7.2-112\n"
-		wget https://github.com/preda/gpuowl/archive/$BRANCH2.tar.gz
+		wget "https://github.com/preda/gpuowl/archive/$BRANCH2.tar.gz"
 		echo -e "\nDecompressing the files\n"
-		tar -xzvf $BRANCH2.tar.gz
-		mv -v gpuowl-$BRANCH2/ $DIR2/
-		sed -i 's/`git describe --long --dirty --always`/v7.2-112-gd6ad1e0/' $DIR2/Makefile
+		tar -xzvf "$BRANCH2.tar.gz"
+		mv -v "gpuowl-$BRANCH2"/ "$DIR2"/
+		sed -i 's/`git describe --long --dirty --always`/v7.2-112-gd6ad1e0/' "$DIR2/Makefile"
 		echo -e "\nDownloading the current version of GpuOwl\n"
-		wget https://github.com/preda/gpuowl/archive/$BRANCH1.tar.gz
+		wget "https://github.com/preda/gpuowl/archive/$BRANCH1.tar.gz"
 		echo -e "\nDecompressing the files\n"
-		tar -xzvf $BRANCH1.tar.gz
-		mv -v gpuowl-$BRANCH1/ $DIR2/
+		tar -xzvf "$BRANCH1.tar.gz"
+		mv -v "gpuowl-$BRANCH1"/ "$DIR2"/
 		if output=$(curl -sf 'https://api.github.com/repos/preda/gpuowl/tags?per_page=1'); then
 			if command -v jq >/dev/null; then
 				name=$(echo "$output" | jq -r '.[0].name')
@@ -161,14 +161,14 @@ else
 					sha=$(echo "$output" | python3 -c 'import sys, json; print(json.load(sys.stdin)["base_commit"]["sha"])')
 				fi
 			fi
-			sed -i 's/`git describe --tags --long --dirty --always`/'"${name}${behind_by:+-${behind_by}${sha:+-g${sha::7}}}"'/' $DIR1/Makefile
+			sed -i 's/`git describe --tags --long --dirty --always`/'"${name}${behind_by:+-${behind_by}${sha:+-g${sha::7}}}"'/' "$DIR1/Makefile"
 		fi
 	fi
 	echo -e "\nSetting up GpuOwl\n"
-	sed -i 's/ -flto//' $DIR1/Makefile
-	sed -i 's/power <= 10/power <= 12/' $DIR2/Proof.cpp
-	sed -i 's/power > 10/power > 12/' $DIR2/Args.cpp
-	pushd $DIR3 >/dev/null
+	sed -i 's/ -flto//' "$DIR1/Makefile"
+	sed -i 's/power <= 10/power <= 12/' "$DIR2/Proof.cpp"
+	sed -i 's/power > 10/power > 12/' "$DIR2/Args.cpp"
+	pushd "$DIR3" >/dev/null
 	sed -i 's/"DoubleCheck"/"Test"/' Task.h
 	sed -i 's/power >= 6 && power <= 10/power > 0 and power <= 12/' ProofSet.h
 	sed -i 's/proofPow >= 6 && proofPow <= 10/proofPow > 0 and proofPow <= 12/' Args.cpp
@@ -177,7 +177,7 @@ else
 	sed -i '/^#pragma once/a #include <array>' Sha3Hash.h
 	sed -i '/^#include <vector>/a #include <array>' clwrap.cpp
 	popd >/dev/null
-	for dir in $DIR1 $DIR2 $DIR3; do
+	for dir in "$DIR1" "$DIR2" "$DIR3"; do
 		echo
 		pushd "$dir" >/dev/null
 		sed -i 's/-Wall -O2/-Wall -Wextra -g -O3/' Makefile
@@ -188,7 +188,7 @@ else
 		rm -f -- *.o
 		popd >/dev/null
 	done
-	pushd $DIR1/build-release >/dev/null
+	pushd "$DIR1/build-release" >/dev/null
 	rm -- *.o
 	mv -v gpuowl ..
 	popd >/dev/null
@@ -237,12 +237,12 @@ elif command -v nvidia-smi >/dev/null && nvidia-smi >/dev/null; then
 	ARGS+=(--cpu-model="${GPU[DEVICE]}")
 
 	mapfile -t GPU_FREQ < <(nvidia-smi --query-gpu=clocks.max.gr --format=csv,noheader,nounits | grep -iv 'not supported')
-	if [[ -n $GPU_FREQ ]]; then
+	if ((${#GPU_FREQ[@]})); then
 		ARGS+=(--frequency="${GPU_FREQ[DEVICE]}")
 	fi
 
 	mapfile -t TOTAL_GPU_MEM < <(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | grep -iv 'not supported')
-	if [[ -n $TOTAL_GPU_MEM ]]; then
+	if ((${#TOTAL_GPU_MEM[@]})); then
 		maxAlloc=${TOTAL_GPU_MEM[DEVICE]}
 		ARGS+=(--memory="$maxAlloc" --max-memory="$(echo "$maxAlloc" | awk '{ printf "%d", $1 * 0.9 }')")
 	fi
@@ -260,8 +260,8 @@ fi
 sed -i "s/^DEVICE=0/DEVICE=$DEVICE/" gpuowl-bench.sh
 chmod +x gpuowl-bench.sh
 echo -e "\nRunning self tests\nThis may take a while…\n"
-time ./gpuowl-bench.sh ../$DIR3/gpuowl 10000 STATS
-time ./gpuowl-bench.sh ../$DIR1/gpuowl 20000 STATS
+time ./gpuowl-bench.sh ../"$DIR3/gpuowl" 10000 STATS
+time ./gpuowl-bench.sh ../"$DIR1/gpuowl" 20000 STATS
 echo "The benchmark data was written to the 'bench.txt' file"
 echo -e "\nDownloading GpuOwl wrapper script\n"
 if [[ -e ../../gpuowl-wrapper.sh ]]; then

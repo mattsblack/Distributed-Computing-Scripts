@@ -33,14 +33,14 @@ jobs:
         gcc --version
     - name: Script
       run: bash -e -o pipefail -- cudalucas.sh ANONYMOUS
-    - uses: actions/upload-artifact@v6
+    - uses: actions/upload-artifact@v7
       if: always()
       with:
         name: ${{ matrix.os }}_cudalucas
         path: |
           cudalucas/
     - name: ShellCheck
-      run: shopt -s globstar; shellcheck -o avoid-nullary-conditions,check-extra-masked-returns,check-set-e-suppressed,deprecate-which,quote-safe-variables,require-double-brackets -s bash **/*.sh
+      run: shopt -s globstar; shellcheck -o avoid-nullary-conditions,check-set-e-suppressed,deprecate-which,quote-safe-variables,require-double-brackets -s bash **/*.sh
       continue-on-error: true
     - name: Clang-Tidy
       run: cd cudalucas && clang-tidy --use-color -checks='bugprone-*,cert-*,clang-analyzer-*,concurrency-*,misc-*,-misc-no-recursion,performance-*,portability-*,readability-const-return-type,readability-container-*,readability-duplicate-include,readability-else-after-return,readability-make-member-function-cons,readability-non-const-parameter,readability-redundant-*,readability-simplify-*,readability-string-compare,readability-use-*' -header-filter='.*' *.c *.cu -- -Wall -O3 --cuda-gpu-arch=sm_50
@@ -70,14 +70,14 @@ jobs:
         $CXX --version
     - name: Script
       run: bash -e -o pipefail -- gpuowl.sh ANONYMOUS
-    - uses: actions/upload-artifact@v6
+    - uses: actions/upload-artifact@v7
       if: always()
       with:
         name: ${{ matrix.os }}_${{ matrix.cxx }}_gpuowl
         path: |
           gpuowl/
     - name: ShellCheck
-      run: shopt -s globstar; shellcheck -o avoid-nullary-conditions,check-extra-masked-returns,check-set-e-suppressed,deprecate-which,quote-safe-variables,require-double-brackets -s bash **/*.sh
+      run: shopt -s globstar; shellcheck -o avoid-nullary-conditions,check-set-e-suppressed,deprecate-which,quote-safe-variables,require-double-brackets -s bash **/*.sh
       continue-on-error: true
 
   PRPLL:
@@ -105,14 +105,14 @@ jobs:
         $CXX --version
     - name: Script
       run: bash -e -o pipefail -- prpll.sh ANONYMOUS
-    - uses: actions/upload-artifact@v6
+    - uses: actions/upload-artifact@v7
       if: always()
       with:
         name: ${{ matrix.os }}_${{ matrix.cxx }}_prpll
         path: |
           prpll/
     - name: ShellCheck
-      run: shopt -s globstar; shellcheck -o avoid-nullary-conditions,check-extra-masked-returns,check-set-e-suppressed,deprecate-which,quote-safe-variables,require-double-brackets -s bash **/*.sh
+      run: shopt -s globstar; shellcheck -o avoid-nullary-conditions,check-set-e-suppressed,deprecate-which,quote-safe-variables,require-double-brackets -s bash **/*.sh
       continue-on-error: true
 
   Mlucas:
@@ -140,14 +140,14 @@ jobs:
         echo -e '## Warnings\n```' >> $GITHUB_STEP_SUMMARY
         grep 'warning:' Mlucas/obj/build.log | sed 's/\x1B\[\([0-9]\+\(;[0-9]\+\)*\)\?[mK]//g' | awk '{ print $NF }' | sort | uniq -c | sort -nr >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
-    - uses: actions/upload-artifact@v6
+    - uses: actions/upload-artifact@v7
       if: always()
       with:
         name: ${{ matrix.os }}_${{ matrix.cc }}_mlucas
         path: |
           Mlucas/
     - name: ShellCheck
-      run: shopt -s globstar; shellcheck -o avoid-nullary-conditions,check-extra-masked-returns,check-set-e-suppressed,deprecate-which,quote-safe-variables,require-double-brackets -s bash **/*.sh
+      run: shopt -s globstar; shellcheck -o avoid-nullary-conditions,check-set-e-suppressed,deprecate-which,quote-safe-variables,require-double-brackets -s bash **/*.sh
       continue-on-error: true
 
   Pylint:

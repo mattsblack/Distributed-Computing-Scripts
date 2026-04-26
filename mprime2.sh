@@ -56,7 +56,7 @@ ARCHITECTURE=$(getconf LONG_BIT)
 echo -e "\nArchitecture:\t\t\t$HOSTTYPE (${ARCHITECTURE}-bit)"
 
 MEMINFO=$(</proc/meminfo)
-TOTAL_PHYSICAL_MEM=$(echo "$MEMINFO" | awk '/^MemTotal:/ { print $2 }')
+TOTAL_PHYSICAL_MEM=$(awk '/^MemTotal:/ { print $2 }' <<<"$MEMINFO")
 echo -e "Total memory (RAM):\t\t$(printf "%'d" $((TOTAL_PHYSICAL_MEM >> 10))) MiB ($(printf "%'d" $((((TOTAL_PHYSICAL_MEM << 10) / 1000) / 1000))) MB)\n"
 
 if [[ -d $DIR && -x "$DIR/mprime" ]]; then
@@ -78,15 +78,15 @@ else
 	cd "$DIR"
 	DIR=$PWD
 	echo -e "Downloading MPrime\n"
-	wget https://www.mersenne.org/download/software/v30/30.19/$FILE
-	if [[ "$(sha256sum $FILE | head -c 64)" != "$SUM" ]]; then
+	wget "https://www.mersenne.org/download/software/v30/30.19/$FILE"
+	if [[ "$(sha256sum "$FILE" | head -c 64)" != "$SUM" ]]; then
 		echo "Error: sha256sum does not match" >&2
 		echo "Please run \"rm -r ${DIR@Q}\" make sure you are using the latest version of this script and try running it again" >&2
 		echo "If you still get this error, please create an issue: https://github.com/tdulcet/Distributed-Computing-Scripts/issues" >&2
 		exit 1
 	fi
 	echo -e "\nDecompressing the files\n"
-	tar -xzvf $FILE
+	tar -xzvf "$FILE"
 fi
 echo -e "\nOptimizing MPrime for your computer\nThis may take a while…\n"
 ./mprime -A"$N" -b

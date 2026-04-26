@@ -79,11 +79,22 @@ echo -e "Linux Distribution:\t\t${PRETTY_NAME:-$NAME-$VERSION}"
 KERNEL=$(</proc/sys/kernel/osrelease) # uname -r
 echo -e "Linux Kernel:\t\t\t$KERNEL"
 
-mapfile -t CPU < <(sed -n 's/^model name[[:blank:]]*: *//p' /proc/cpuinfo | uniq)
-if [[ -z $CPU ]]; then
+case $HOSTTYPE in
+	aarch64 | arm*)
+		cpu=$(sed -n 's/^\(model name\|Processor\)[[:blank:]]*: *//p' /proc/cpuinfo)
+		;;
+	powerpc*)
+		cpu=$(sed -n 's/^cpu[[:blank:]]*: *//p' /proc/cpuinfo)
+		;;
+	*)
+		cpu=$(sed -n 's/^model name[[:blank:]]*: *//p' /proc/cpuinfo)
+		;;
+esac
+mapfile -t CPU < <(echo "$cpu" | uniq)
+if ! ((${#CPU[*]})); then
 	mapfile -t CPU < <(lscpu | grep -i '^model name' | sed -n 's/^.\+:[[:blank:]]*//p' | uniq)
 fi
-if [[ -n $CPU ]]; then
+if ((${#CPU[*]})); then
 	echo -e "Processor (CPU):\t\t${CPU[0]}$([[ ${#CPU[*]} -gt 1 ]] && printf '\n\t\t\t\t%s' "${CPU[@]:1}")"
 fi
 
@@ -96,14 +107,14 @@ fi
 
 sleep 1
 
-CPU_FREQS=($(sed -n 's/^cpu MHz[[:blank:]]*: *//p' /proc/cpuinfo))
-if [[ -z $CPU_FREQS ]]; then
-	for file in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_cur_freq; do
-		if [[ -r $file ]]; then
-			CPU_FREQS=($(awk '{ printf "%g\n", $1 / 1000 }' /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_cur_freq))
-		fi
-		break
-	done
+for file in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_cur_freq; do # cpuinfo_cur_freq
+	if [[ -r $file ]]; then
+		CPU_FREQS=($(awk '{ printf "%g\n", $1 / 1000 }' /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_cur_freq))
+	fi
+	break
+done
+if ! ((${#CPU_FREQS[*]})); then
+	CPU_FREQS=($(sed -n 's/^cpu MHz[[:blank:]]*: *//p' /proc/cpuinfo))
 fi
 CPU_FREQ=${CPU_FREQ:+$(printf '%s\n' "${CPU_FREQS[@]}" | sort -nr | head -n 1)}
 echo -e "CPU frequency/speed:\t\t$(printf "%'.0f" "${CPU_FREQ/./$decimal_point}") MHz"
@@ -128,7 +139,7 @@ if [[ ${CPU_CACHE_SIZES[1]} -eq 0 && ${CPU_CACHE_SIZES[2]} -eq 0 && ${CPU_CACHE_
 					if [[ $type == Instruction ]]; then
 						continue
 					fi
-					CPU_CACHE_SIZES[level]=$size
+					((CPU_CACHE_SIZES[level] = size > CPU_CACHE_SIZES[level] ? size : CPU_CACHE_SIZES[level]))
 				fi
 			done
 		fi
@@ -140,16 +151,16 @@ ARCHITECTURE=$(getconf LONG_BIT)
 echo -e "Architecture:\t\t\t$HOSTTYPE (${ARCHITECTURE}-bit)"
 
 MEMINFO=$(</proc/meminfo)
-TOTAL_PHYSICAL_MEM=$(echo "$MEMINFO" | awk '/^MemTotal:/ { print $2 }')
+TOTAL_PHYSICAL_MEM=$(awk '/^MemTotal:/ { print $2 }' <<<"$MEMINFO")
 echo -e "Total memory (RAM):\t\t$(printf "%'d" $((TOTAL_PHYSICAL_MEM >> 10))) MiB ($(printf "%'d" $((((TOTAL_PHYSICAL_MEM << 10) / 1000) / 1000))) MB)"
 
-TOTAL_SWAP=$(echo "$MEMINFO" | awk '/^SwapTotal:/ { print $2 }')
+TOTAL_SWAP=$(awk '/^SwapTotal:/ { print $2 }' <<<"$MEMINFO")
 echo -e "Total swap space:\t\t$(printf "%'d" $((TOTAL_SWAP >> 10))) MiB ($(printf "%'d" $((((TOTAL_SWAP << 10) / 1000) / 1000))) MB)"
 
 if command -v lspci >/dev/null; then
 	mapfile -t GPU < <(lspci 2>/dev/null | grep -i 'vga\|3d\|2d' | sed -n 's/^.*: //p')
 fi
-if [[ -n $GPU ]]; then
+if ((${#GPU[*]})); then
 	echo -e "Graphics Processor (GPU):\t${GPU[0]}$([[ ${#GPU[*]} -gt 1 ]] && printf '\n\t\t\t\t%s' "${GPU[@]:1}")"
 fi
 
@@ -282,15 +293,15 @@ for i in "${!ARGS[@]}"; do
 		file="mlucas.${CORES:+${CORES[i]}c.}${threads[j]}t.$j.cfg"
 		if [[ ! -e $file ]]; then
 			# for ((k = 7; k < 12; ++k)); do
-				# m=$((1 << k))
-				# for l in {8..15}; do
-					# fft=$((l * m))
-					# printf '\n\tFFT length: %sK (%s)\n\n' $fft "$(numfmt --from=iec --to=iec ${fft}K)"
-					# time ./Mlucas -fft $fft -core "${args[index]}"
-				# done
+			# 	m=$((1 << k))
+			# 	for l in {8..15}; do
+			# 		fft=$((l * m))
+			# 		printf '\n\tFFT length: %sK (%s)\n\n' $fft "$(numfmt --from=iec --to=iec ${fft}K)"
+			# 		time ./Mlucas -fft $fft -core "${args[index]}"
+			# 	done
 			# done
 			for s in m; do # tt t s m l h
-				time stdbuf -oL ./Mlucas -s $s -core "${args[index]}" |& tee -a "test.${CORES:+${CORES[i]}c.}${threads[j]}t.$j.log" | grep -i 'error\|warn\|assert\|info\|fft length\|fft radices'
+				time stdbuf -oL ./Mlucas -s "$s" -core "${args[index]}" |& tee -a "test.${CORES:+${CORES[i]}c.}${threads[j]}t.$j.log" | grep -i 'error\|warn\|assert\|info\|fft length\|fft radices'
 			done
 			if [[ ! -e mlucas.cfg ]]; then
 				>mlucas.cfg
@@ -330,19 +341,19 @@ done
 # mapfile -t affts <<<"${FFTS[MIN]}"
 # atimes=(${TIMES[MIN]})
 # for i in "${!TIMES[@]}"; do
-	# if ((i)); then
-		# mapfile -t ffts <<<"${FFTS[i]}"
-		# times=(${TIMES[i]})
-		# mean=$(for k in "${!affts[@]}"; do for j in "${!ffts[@]}"; do if [[ ${affts[k]} -eq ${ffts[j]} ]]; then
-			# printf '%s\t%s\n' "${atimes[k]}" "${times[j]}"
-			# break
-		# fi; done; done | awk '{ sum+=$1/$2 } END { printf "%.15g\n", sum / NR }')
-		# if (($(echo "$mean" | awk '{ print ($1>1) }'))); then
-			# MIN=$i
-			# affts=("${ffts[@]}")
-			# atimes=("${times[@]}")
-		# fi
-	# fi
+# 	if ((i)); then
+# 		mapfile -t ffts <<<"${FFTS[i]}"
+# 		times=(${TIMES[i]})
+# 		mean=$(for k in "${!affts[@]}"; do for j in "${!ffts[@]}"; do if [[ ${affts[k]} -eq ${ffts[j]} ]]; then
+# 			printf '%s\t%s\n' "${atimes[k]}" "${times[j]}"
+# 			break
+# 		fi; done; done | awk '{ sum+=$1/$2 } END { printf "%.15g\n", sum / NR }')
+# 		if (($(echo "$mean" | awk '{ print ($1>1) }'))); then
+# 			MIN=$i
+# 			affts=("${ffts[@]}")
+# 			atimes=("${times[@]}")
+# 		fi
+# 	fi
 # done
 files=()
 trap 'rm "${files[@]}"' EXIT
@@ -363,7 +374,7 @@ for i in "${!ARGS[@]}"; do
 	iters=()
 	printf "\n#%'d\tWorkers/Runs: %'d\tThreads: %s\n" $((i + 1)) ${#args[*]} "${THREADS[i]// /, }"
 	printf "[%($date_fmt)T]\n" -1 >>bench.txt
-	if [[ -n $ffts ]]; then
+	if ((${#ffts[*]})); then
 		for j in "${!ffts[@]}"; do
 			printf '\n\tTiming FFT length: %sK (%s)\n\n' "${ffts[j]}" "$(numfmt --from=iec --to=iec "${ffts[j]}K")"
 			radices=(${aradices[j]})
@@ -375,7 +386,7 @@ for i in "${!ARGS[@]}"; do
 			if grep -iq 'fatal\|halt' "${files[@]::${#args[*]}}"; then
 				echo
 				for k in "${!args[@]}"; do
-					stdbuf -oL ./Mlucas -fft "${ffts[j]}" -iters 1000 -radset "${radices[${#threads[*]} == 1 || (threads[0] < threads[1] && k == 0) || (threads[0] > threads[1] && k < ${#args[*]} - 1) ? 0 : 1]}" -core "${args[k]}" -shift $RANDOM >&"${files[k]}" &
+					stdbuf -oL ./Mlucas -fft "${ffts[j]}" -iters 1000 -radset "${radices[${#threads[*]} == 1 || (threads[0] < threads[1] && k == 0) || (threads[0] > threads[1] && k < ${#args[*]} - 1) ? 0 : 1]}" -core "${args[k]}" -shift "$RANDOM" >&"${files[k]}" &
 				done
 				wait
 				grep -ih 'error\|warn\|assert\|clocks' "${files[@]::${#args[*]}}"
@@ -405,7 +416,7 @@ for i in "${!ITERS[@]}"; do
 	if ((i)); then
 		mapfile -t ffts <<<"${FFTS[i]}"
 		iters=(${ITERS[i]})
-		if [[ -n $ffts ]]; then
+		if ((${#ffts[*]})); then
 			mean=$(for k in "${!affts[@]}"; do for j in "${!ffts[@]}"; do if [[ ${affts[k]} -eq ${ffts[j]} ]]; then
 				printf '%s\t%s\n' "${aiters[k]}" "${iters[j]}"
 				break
@@ -474,7 +485,7 @@ threads=(${THREADS[MAX]})
 					threads=(${THREADS[i]})
 					mapfile -t ffts <<<"${FFTS[i]}"
 					iters=(${ITERS[i]})
-					if [[ -n $ffts ]]; then
+					if ((${#ffts[*]})); then
 						# join -o 1.2,2.2 <(paste <(echo "${FFTS[MAX]}") <(echo "${ITERS[MAX]}")) <(paste <(echo "${FFTS[i]}") <(echo "${ITERS[i]}"))
 						array=($(for k in "${!affts[@]}"; do for j in "${!ffts[@]}"; do if [[ ${affts[k]} -eq ${ffts[j]} ]]; then
 							printf '%s\t%s\n' "${aiters[k]}" "${iters[j]}"
@@ -512,7 +523,7 @@ for i in "${!RUNS[@]}"; do
 	popd >/dev/null
 done
 total=$((TOTAL_PHYSICAL_MEM >> 10))
-python3 -OO ../autoprimenet.py -t 0 -T "$TYPE" -u "$USERID" --num-workers ${#RUNS[*]} "${args[@]}" -m -H "$COMPUTER" --cpu-model="${CPU[0]}" --frequency="$(if [[ -n $CPU_FREQ ]]; then printf "%.0f" "${CPU_FREQ/./$decimal_point}"; else echo "1000"; fi)" --memory=$total --max-memory="$(echo $total | awk '{ printf "%d", $1 * 0.9 }')" --cores="$CPU_CORES" --hyperthreads="$HP" --l1=$((CPU_CACHE_SIZES[1] ? CPU_CACHE_SIZES[1] >> 10 : 8)) --l2=$((CPU_CACHE_SIZES[2] ? CPU_CACHE_SIZES[2] >> 10 : 512)) --l3=$((CPU_CACHE_SIZES[3] >> 10))
+python3 -OO ../autoprimenet.py -t 0 -T "$TYPE" -u "$USERID" --num-workers ${#RUNS[*]} "${args[@]}" -m -H "$COMPUTER" --cpu-model="${CPU[0]}" --frequency="$(if [[ -n $CPU_FREQ ]]; then printf "%.0f" "${CPU_FREQ/./$decimal_point}"; else echo "1000"; fi)" --memory="$total" --max-memory="$(echo "$total" | awk '{ printf "%d", $1 * 0.9 }')" --cores="$CPU_CORES" --hyperthreads="$HP" --l1=$((CPU_CACHE_SIZES[1] ? CPU_CACHE_SIZES[1] >> 10 : 8)) --l2=$((CPU_CACHE_SIZES[2] ? CPU_CACHE_SIZES[2] >> 10 : 512)) --l3=$((CPU_CACHE_SIZES[3] >> 10))
 maxalloc=$(echo ${#RUNS[*]} | awk '{ printf "%g", 90 / $1 }')
 echo -e "\nStarting AutoPrimeNet\n"
 nohup python3 -OO ../autoprimenet.py >>'autoprimenet.out' &

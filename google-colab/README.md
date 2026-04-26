@@ -31,7 +31,7 @@ A user may optionally perform other steps to gain more insight into GIMPS and/or
 
 1. Create a [GIMPS/PrimeNet account](https://www.mersenne.org/update/).
 
-2. Set the `debug` option to view the last 100 lines of output and the status from the respective GIMPS program. Alternatively, you may access the `cpu1.out`…`cpuN.out`, `1/gpu.out`…`N/gpu.out`, and `1/autoprimenet.out`…`N/autoprimenet.out` files, where `N` is the `computer_number` value, in your Google Drive under the `GIMPS` and `mprime_gpu`/`mprime_cpu` or `prpll` folders to see the full MPrime and/or PRPLL output respectively.
+2. Set the `debug` option to view the last 100 lines of output and the status from the respective GIMPS program. Alternatively, you may access the `cpu1.out`…`cpuN.out`, `worker-1/gpu.out`…`worker-N/gpu.out`, and `worker-1/autoprimenet.out`…`worker-N/autoprimenet.out` files, where `N` is the `computer_number` value, in your Google Drive under the `GIMPS` and `mprime_gpu`/`mprime_cpu` or `prpll` folders to see the full MPrime and/or PRPLL output respectively.
 
 ## Required Tools, Restrictions
 Anyone with an internet connection and a free Google/Gmail account with just [~50 MiB of free space](https://www.google.com/settings/storage) on Google Drive can use both our notebooks to “crunch” primes.

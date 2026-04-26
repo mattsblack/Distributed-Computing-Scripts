@@ -92,10 +92,10 @@ if command -v git >/dev/null; then
 	sed -i 's/ --match v\/prpll\/\*//' Makefile
 else
 	echo -e "Downloading PRPLL\n"
-	wget https://github.com/gwoltman/gpuowl/archive/$BRANCH.tar.gz
+	wget "https://github.com/gwoltman/gpuowl/archive/$BRANCH.tar.gz"
 	echo -e "\nDecompressing the files\n"
-	tar -xzvf $BRANCH.tar.gz
-	mv -v gpuowl-$BRANCH/ "$DIR"/
+	tar -xzvf "$BRANCH.tar.gz"
+	mv -v "gpuowl-$BRANCH"/ "$DIR"/
 	cd "$DIR"
 	if output=$(curl -sf 'https://api.github.com/repos/gwoltman/gpuowl/tags?per_page=1'); then
 		if command -v jq >/dev/null; then
@@ -169,12 +169,12 @@ elif command -v nvidia-smi >/dev/null && nvidia-smi >/dev/null; then
 	ARGS+=(--cpu-model="${GPU[DEVICE]}")
 
 	mapfile -t GPU_FREQ < <(nvidia-smi --query-gpu=clocks.max.gr --format=csv,noheader,nounits | grep -iv 'not supported')
-	if [[ -n $GPU_FREQ ]]; then
+	if ((${#GPU_FREQ[@]})); then
 		ARGS+=(--frequency="${GPU_FREQ[DEVICE]}")
 	fi
 
 	mapfile -t TOTAL_GPU_MEM < <(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | grep -iv 'not supported')
-	if [[ -n $TOTAL_GPU_MEM ]]; then
+	if ((${#TOTAL_GPU_MEM[@]})); then
 		maxAlloc=${TOTAL_GPU_MEM[DEVICE]}
 		ARGS+=(--memory="$maxAlloc" --max-memory="$(echo "$maxAlloc" | awk '{ printf "%d", $1 * 0.9 }')")
 	fi
@@ -184,10 +184,10 @@ echo -e "\nStarting AutoPrimeNet\n"
 nohup python3 -OO autoprimenet.py >>'autoprimenet.out' &
 sleep 1
 echo -e "\nTuning PRPLL for your computer and GPU\nThis may take a while…\n"
-time ./prpll -device $DEVICE -tune minexp=0
+time ./prpll -device "$DEVICE" -tune minexp=0
 sed -i '/-log/ s/^/# /' config.txt
 echo -e "\nStarting PRPLL\n"
-nohup ./prpll -device $DEVICE >>"prpll.out" &
+nohup ./prpll -device "$DEVICE" >>"prpll.out" &
 sleep 1
 #crontab -l | { cat; echo "@reboot cd ${DIR@Q} && nohup ./prpll -device $DEVICE >> 'prpll.out' &"; } | crontab -
 #crontab -l | { cat; echo "@reboot cd ${DIR@Q} && nohup python3 -OO autoprimenet.py >> 'autoprimenet.out' &"; } | crontab -

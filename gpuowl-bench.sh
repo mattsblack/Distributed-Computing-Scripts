@@ -34,7 +34,7 @@ USE=${3:-STATS}
 
 # GpuOwl arguments
 ARGS=(
-	-device $DEVICE
+	-device "$DEVICE"
 	# -log 10000
 	-use "$USE"
 
@@ -48,7 +48,7 @@ if command -v clinfo >/dev/null; then
 elif command -v nvidia-smi >/dev/null && nvidia-smi >/dev/null; then
 	mapfile -t TOTAL_GPU_MEM < <(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | grep -iv 'not supported')
 fi
-if [[ -n $TOTAL_GPU_MEM ]]; then
+if ((${#TOTAL_GPU_MEM[@]})); then
 	ARGS+=(-maxAlloc "$(echo "${TOTAL_GPU_MEM[DEVICE]}" | awk '{ printf "%d", $1 * 0.9 }')M")
 fi
 
@@ -71,7 +71,7 @@ output=$("$GPUOWL" -h)
 if echo "$output" | grep -q '^-unsafeMath'; then
 	ARGS+=(-unsafeMath)
 # elif echo "$output" | grep -q '^-safeMath'; then
-	# ARGS+=( -safeMath )
+# 	ARGS+=( -safeMath )
 fi
 if echo "$output" | grep -q '^-nospin'; then
 	ARGS+=(-nospin)

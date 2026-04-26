@@ -75,7 +75,7 @@ DEVICE=0
 
 # GpuOwl arguments for all versions
 ARGS=(
-	-device $DEVICE
+	-device "$DEVICE"
 	# -block 1000
 	# -results "$ARESULTS_FILE"
 
@@ -93,9 +93,9 @@ TIME=1
 # Lock file
 LOCK="~lock"
 
-exec 200>"$LOCK"
+exec {LOCK_FD}>"$LOCK"
 
-if ! flock -n 200; then
+if ! flock -n "$LOCK_FD"; then
 	echo "Error: This script is already running." >&2
 	exit 1
 fi
@@ -109,7 +109,7 @@ echo
 if command -v lspci >/dev/null; then
 	mapfile -t GPU < <(lspci 2>/dev/null | grep -i 'vga\|3d\|2d' | sed -n 's/^.*: //p')
 fi
-if [[ -n $GPU ]]; then
+if ((${#GPU[@]})); then
 	echo -e "Graphics Processor (GPU):\t${GPU[0]}$([[ ${#GPU[*]} -gt 1 ]] && printf '\n\t\t\t\t%s' "${GPU[@]:1}")"
 	# echo -e "Graphics Processor (GPU):\t${GPU[DEVICE]}"
 fi
@@ -122,16 +122,16 @@ if command -v clinfo >/dev/null; then
 elif command -v nvidia-smi >/dev/null && nvidia-smi >/dev/null; then
 	mapfile -t TOTAL_GPU_MEM < <(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | grep -iv 'not supported')
 fi
-if [[ -n $TOTAL_GPU_MEM ]]; then
+if ((${#TOTAL_GPU_MEM[@]})); then
 	# echo -e -n "\tGPU Memory (RAM):\t"
 	# for i in "${!TOTAL_GPU_MEM[@]}"; do
-		# echo -n "$( ((i)) && echo ", ")$(printf "%'d" "${TOTAL_GPU_MEM[i]}") MiB ($(numfmt --from=iec --to=iec-i "${TOTAL_GPU_MEM[i]}M")B)"
+	# 	echo -n "$( ((i)) && echo ", ")$(printf "%'d" "${TOTAL_GPU_MEM[i]}") MiB ($(numfmt --from=iec --to=iec-i "${TOTAL_GPU_MEM[i]}M")B)"
 	# done
 	# echo
 	echo -e "\tGPU Memory (RAM):\t$(printf "%'d" "${TOTAL_GPU_MEM[DEVICE]}") MiB ($(numfmt --from=iec --to=iec-i "${TOTAL_GPU_MEM[DEVICE]}M")B)"
 fi
 if [[ -z $maxAlloc ]]; then
-	if [[ -n $TOTAL_GPU_MEM ]]; then
+	if ((${#TOTAL_GPU_MEM[@]})); then
 		maxAlloc=${TOTAL_GPU_MEM[DEVICE]}
 	else
 		echo "Warning: Could not determine total GPU Memory (RAM), please install clinfo. Assuming 1024 MiB (1 GiB)."
@@ -142,9 +142,9 @@ ARGS+=(-maxAlloc "$(echo "$maxAlloc" | awk '{ printf "%d", $1 * 0.9 }')M")
 
 DISK_USAGE=$(df -k . | tail -n +2)
 if [[ -n $DISK_USAGE ]]; then
-	DISK_MOUNT=$(echo "$DISK_USAGE" | awk '{ print $6 }')
-	TOTAL_DISK=$(echo "$DISK_USAGE" | awk '{ print $2 }')
-	AVAILABLE_DISK=$(echo "$DISK_USAGE" | awk '{ print $4 }')
+	DISK_MOUNT=$(awk '{ print $6 }' <<<"$DISK_USAGE")
+	TOTAL_DISK=$(awk '{ print $2 }' <<<"$DISK_USAGE")
+	AVAILABLE_DISK=$(awk '{ print $4 }' <<<"$DISK_USAGE")
 	echo -e "Disk space available:\t\t${DISK_MOUNT}: $(numfmt --from=iec --to=iec-i "${AVAILABLE_DISK}K")B / $(numfmt --from=iec --to=iec-i "${TOTAL_DISK}K")B ($(numfmt --from=iec --to=si "${AVAILABLE_DISK}K")B / $(numfmt --from=iec --to=si "${TOTAL_DISK}K")B)"
 fi
 
@@ -252,7 +252,7 @@ while true; do
 			else
 				idx=4
 			fi
-			n=$(echo "$work" | cut -d, -f $idx)
+			n=$(echo "$work" | cut -d, -f "$idx")
 			printf "Starting %s of the exponent %'d\n" "$work_type_str" "$n"
 			case "$work_type" in
 				'Test' | 'DoubleCheck')
@@ -285,7 +285,7 @@ while true; do
 				fi
 				args+=(-proof "$proof_power")
 			fi
-			echo -e "with GpuOwl $(<"$(if [[ -d ${dir}/src ]]; then echo ${dir}/src/version.inc; else echo ${dir}/version.inc; fi)").\n"
+			echo -e "with GpuOwl $(<"$(if [[ -d ${dir}/src ]]; then echo "${dir}/src/version.inc"; else echo "${dir}/version.inc"; fi)").\n"
 			gpuowl=(nice "./${dir}/gpuowl" "${args[@]}")
 			if [[ -z $RESTART ]]; then
 				exec "${gpuowl[@]}"

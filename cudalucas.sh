@@ -147,12 +147,12 @@ if command -v nvidia-smi >/dev/null && nvidia-smi >/dev/null; then
 	ARGS+=(--cpu-model="${GPU[DEVICE]}")
 
 	mapfile -t GPU_FREQ < <(nvidia-smi --query-gpu=clocks.max.gr --format=csv,noheader,nounits | grep -iv 'not supported')
-	if [[ -n $GPU_FREQ ]]; then
+	if ((${#GPU_FREQ[@]})); then
 		ARGS+=(--frequency="${GPU_FREQ[DEVICE]}")
 	fi
 
 	mapfile -t TOTAL_GPU_MEM < <(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | grep -iv 'not supported')
-	if [[ -n $TOTAL_GPU_MEM ]]; then
+	if ((${#TOTAL_GPU_MEM[@]})); then
 		total=${TOTAL_GPU_MEM[DEVICE]}
 		ARGS+=(--memory="$total" --max-memory="$total")
 	fi
@@ -169,7 +169,7 @@ echo -e "\nRunning self tests\nThis will take a while…\n"
 ./CUDALucas -r 1
 # ./CUDALucas 6972593
 echo -e "\nStarting CUDALucas\n"
-nohup nice ./CUDALucas -d $DEVICE >>"cudalucas.out" &
+nohup nice ./CUDALucas -d "$DEVICE" >>"cudalucas.out" &
 sleep 1
 #crontab -l | { cat; echo "@reboot cd ${DIR@Q} && nohup nice ./CUDALucas -d $DEVICE >> 'cudalucas.out' &"; } | crontab -
 #crontab -l | { cat; echo "@reboot cd ${DIR@Q} && nohup python3 -OO autoprimenet.py >> 'autoprimenet.out' &"; } | crontab -

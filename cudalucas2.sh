@@ -160,12 +160,12 @@ if command -v nvidia-smi >/dev/null && nvidia-smi >/dev/null; then
 	ARGS+=(--cpu-model="${GPU[DEVICE]}")
 
 	mapfile -t GPU_FREQ < <(nvidia-smi --query-gpu=clocks.max.gr --format=csv,noheader,nounits | grep -iv 'not supported')
-	if [[ -n $GPU_FREQ ]]; then
+	if ((${#GPU_FREQ[@]})); then
 		ARGS+=(--frequency="${GPU_FREQ[DEVICE]}")
 	fi
 
 	mapfile -t TOTAL_GPU_MEM < <(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | grep -iv 'not supported')
-	if [[ -n $TOTAL_GPU_MEM ]]; then
+	if ((${#TOTAL_GPU_MEM[@]})); then
 		total=${TOTAL_GPU_MEM[DEVICE]}
 		ARGS+=(--memory="$total" --max-memory="$total")
 	fi
